@@ -5,7 +5,7 @@ module Web.Analyze.Client (
   ) where
 
 import qualified Snap.Core as S (Request)
-import Snap.Core (rqContextPath, rqPathInfo, getRequest)
+import Snap.Core (rqContextPath, rqPathInfo, rqMethod, getRequest, Method(..))
 import Snap.Snaplet (Handler)
 import Control.Monad (void)
 import Control.Monad.Trans (liftIO)
@@ -30,12 +30,19 @@ sendResult man token req start end = do
     let time = milliseconds (diffUTCTime end start) :: Int
     initreq <- parseUrl "http://analyze.positionstudios.com/submit/visit"
     let url = B.append (rqContextPath req) (rqPathInfo req)
+    let meth = methodtobs (rqMethod req)
     let httpreq = initreq { method = "POST"
                           , queryString = B.concat ["url="
                                                    , url
                                                    , "&render="
                                                    , B8.pack (show time)
+                                                   , "&method="
+                                                   , meth
                                                    , "&token="
                                                    , token]}
     void (httpLbs httpreq man)
   where milliseconds = floor . fromRational . (1000 *) . toRational
+        methodtobs GET = "get"
+        methodtobs POST = "post"
+        methodtobs PUT = "put"
+        methodtobs DELETE = "delete"
