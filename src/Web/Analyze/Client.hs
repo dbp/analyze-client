@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 module Web.Analyze.Client (
-       wrap
+       wrap,
+       wrap'
   ) where
 
 import Prelude hiding (catch)
@@ -22,21 +23,27 @@ import Control.Exception.Base (SomeException)
 wrap :: Handler b v a -> Manager
      -> ByteString -> Handler b v a
      -> Handler b v a
-wrap errh man token h =
-    handleErrors errh man token $ do
-      start <- liftIO getCurrentTime
-      res <- h
-      end <- liftIO getCurrentTime
-      req <- getRequest
-      liftIO $ forkIO (sendResult man token req start end)
-      return res
+wrap = wrap' (return Nothing)
 
-handleErrors :: Handler b v a -> Manager -> ByteString
+wrap' :: Handler b v (Maybe ByteString) -> Handler b v a
+      -> Manager -> ByteString -> Handler b v a
+      -> Handler b v a
+wrap' userh errh man token h =
+  handleErrors userh errh man token $ do
+    start <- liftIO getCurrentTime
+    res <- h
+    end <- liftIO getCurrentTime
+    req <- getRequest
+    liftIO $ forkIO (sendResult man token req start end)
+    return res
+
+handleErrors :: Handler b v (Maybe ByteString) -> Handler b v a -> Manager -> ByteString
              -> Handler b v a -> Handler b v a
-handleErrors errh man token h =
+handleErrors userh errh man token h =
   catch h $ \(e::SomeException) -> do
     req <- getRequest
-    liftIO $ forkIO (sendError man token req (B8.pack (show e)))
+    uid <- userh
+    liftIO $ forkIO (sendError man token req (B8.pack (show e)) uid)
     errh
 
 sendResult :: Manager -> ByteString
@@ -66,10 +73,11 @@ sendResult man token req start end = do
         methodtobs DELETE = "delete"
 
 
-sendError :: Manager -> ByteString -> S.Request -> ByteString -> IO ()
-sendError man token req message = do
+sendError :: Manager -> ByteString -> S.Request -> ByteString -> Maybe ByteString -> IO ()
+sendError man token req message muid = do
     initreq <- parseUrl "http://analyze.positionstudios.com/submit/error"
     let url = B.append (rqContextPath req) (rqPathInfo req)
+    let user = maybe "" (B.append "&uid=") muid
     let httpreq =
          initreq { method = "POST"
                  , queryString =
@@ -77,6 +85,7 @@ sendError man token req message = do
                           , url
                           , "&message="
                           , urlEncode message
+                          , user
                           , "&token="
                           , token]}
     void (httpLbs httpreq man)
