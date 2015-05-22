@@ -20,13 +20,20 @@ import qualified Data.ByteString.Char8 as B8 (pack)
 import Control.Monad.CatchIO (catch)
 import Control.Exception.Base (SomeException)
 
-wrap :: Handler b v a -> Manager
-     -> ByteString -> Handler b v a
+-- | wraps a request in code to log the requests and catch and report all errors.
+wrap :: Handler b v a  -- ^ a handler to call in case of error, after it has been reported (presumably to show a 500 page)
+     -> Manager        -- ^ a conduit manager, used for http logging requests
+     -> ByteString     -- ^ the token for the analyze service
+     -> Handler b v a  -- ^ the handler to be wrapped
      -> Handler b v a
 wrap = wrap' (return Nothing)
 
-wrap' :: Handler b v (Maybe ByteString) -> Handler b v a
-      -> Manager -> ByteString -> Handler b v a
+-- | like wrap, but also takes a handler that produces a user id if available
+wrap' :: Handler b v (Maybe ByteString) -- ^ a way to get a user id, if available
+      -> Handler b v a -- ^ a handler to call in case of error, after it has been reported (presumably to show a 500 page)
+      -> Manager       -- ^ a conduit manager, used for http logging requests
+      -> ByteString    -- ^ the token for the analyze service
+      -> Handler b v a -- ^ the handler to be wrapped
       -> Handler b v a
 wrap' userh errh man token h =
   handleErrors userh errh man token $ do

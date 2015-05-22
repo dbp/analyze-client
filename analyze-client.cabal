@@ -1,5 +1,5 @@
 name:                analyze-client
-version:             0.1.0.0
+version:             0.1.0.2
 synopsis:            Client for analyze service
 -- description:
 homepage:            https://github.com/dbp/analyze-client
@@ -17,10 +17,10 @@ library
         Web.Analyze.Client
   hs-source-dirs: src
   build-depends:       base == 4.*,
-                       snap == 0.13.*,
+                       snap >= 0.13 && < 0.15,
                        snap-core == 0.9.*,
                        http-conduit == 2.*,
-                       time == 1.4.*,
-                       bytestring >= 0.9.1 && < 0.11,
-                       mtl >= 2 && < 3,
+                       time >= 1.4 && < 1.6,
+                       bytestring,
+                       mtl,
                        MonadCatchIO-transformers
