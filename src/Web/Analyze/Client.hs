@@ -78,6 +78,8 @@ sendResult man token req start end = do
         methodtobs POST = "post"
         methodtobs PUT = "put"
         methodtobs DELETE = "delete"
+        methodtobs HEAD = "head"
+        methodtobs _ = "other"
 
 
 sendError :: Manager -> ByteString -> S.Request -> ByteString -> Maybe ByteString -> IO ()
